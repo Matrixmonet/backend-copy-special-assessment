@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""Copyspecial Assignment"""
-
+#!/usr/bin/python
 # Copyright 2010 Google Inc.
 # Licensed under the Apache License, Version 2.0
 # http://www.apache.org/licenses/LICENSE-2.0
@@ -9,36 +6,121 @@
 # Google's Python Class
 # http://code.google.com/edu/languages/google-python-class/
 
+import sys
 import re
 import os
 import shutil
 import subprocess
 import argparse
+from argparse import RawTextHelpFormatter
 
-# This is to help coaches and graders identify student assignments
-__author__ = "???"
-
+"""Copy Special exercise
+"""
 
 # +++your code here+++
 # Write functions and modify main() to call them
+__author__ = "Sarah Gale"
+
+
+def is_special_path(a_path):
+    """
+    a_path may be a file or a directory
+    if path is not special, return False
+    if path is special, return True
+    """
+    match = re.search(r'__\w+__', a_path)
+    if match is None:
+        is_special = False
+    else:
+        is_special = True
+    return is_special
+
+
+def get_special_paths(a_dir):
+    """
+    return a list of the absolute paths of the special files in the given directory
+    """
+    filenames = os.listdir(a_dir)
+    file_list = []
+    for filename in filenames:
+        if ((not os.path.isdir(filename)) and is_special_path(filename)):
+            a_path = os.path.join(a_dir, filename)
+            absolute_path = os.path.abspath(a_path)
+            file_list.append(absolute_path)
+    return file_list
+
+
+def get_special_paths_in_dirs(a_dirs):
+    """
+    return a list of the absolute paths of the special files in a list of directories
+    """
+    file_list = []
+    for dirname in a_dirs:
+        files_in_dirname = get_special_paths(dirname)
+        # extend, not append
+        file_list.extend(files_in_dirname)
+    return file_list
+
+
+def copy_to(paths, a_dir):
+    """
+    given a list of paths, copies those files into the given directory
+    specification says use shutil
+    """
+    for path in paths:
+        # copytree will copy a directory, not a file
+        #shutil.copytree(path, a_dir)
+        # copy2 will copy a file, not a directory
+        shutil.copy2(path, a_dir)
+
+
+def zip_to(paths, zippath):
+    """
+    given a list of paths, zip those files up into the given zipfile
+    """
+    ziplist = ['zip', '-j', zippath]
+    ziplist.extend(paths)
+    subprocess.call(ziplist)
+
 
 def main():
-    # This snippet will help you get started with the argparse module.
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--todir', help='dest dir for special files')
-    parser.add_argument('--tozip', help='dest zipfile for special files')
-    # TODO need an argument to pick up 'from_dir'
-    args = parser.parse_args()
+    """
+        Read arguments from command line or from a file.
+    """
 
-    # TODO you must write your own code to get the cmdline args.
-    # Read the docs and examples for the argparse module about how to do this.
+    parser = argparse.ArgumentParser(description='''    For help, use argument -h
+    $ ./copyspecial.py -h
+    To specify an argument, prefix with --
+    $ python3 copyspecial.py --fromdir "." --todir "./test_to_dir" --tozip "test.zip"''',
+                                     formatter_class=RawTextHelpFormatter,
+                                     )
 
-    # Parsing command line arguments is a must-have skill.
-    # This is input data validation.  If something is wrong (or missing) with any
-    # required args, the general rule is to print a usage message and exit(1).
+    parser.add_argument('--fromdir', action="store", dest="fromdir",
+                        help='directory to search for file names containing "__\w__"')
+    parser.add_argument('--todir', action="store", dest="todir",
+                        help='directory to copy files to')
+    parser.add_argument('--tozip', action="store", dest="tozip",
+                        help='zip file to write files to e.g. "test.zip"')
 
-    # +++your code here+++
+    arguments = parser.parse_args()
+    print(arguments)
+    print(arguments.fromdir)
+    print(arguments.todir)
+    print(arguments.tozip)
+
     # Call your functions
+    file_list = get_special_paths_in_dirs(arguments.fromdir)
+
+    if (not arguments.todir) and (not arguments.tozip):
+        print('File list')
+        for filename in file_list:
+            print(filename)
+        sys.exit(1)
+
+    if arguments.todir:
+        copy_to(file_list, arguments.todir)
+    if arguments.tozip:
+        zip_to(file_list, arguments.tozip)
 
 
 if __name__ == "__main__":
